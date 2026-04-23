@@ -77,6 +77,13 @@
             padding: 20px;
         }
 
+        .button-area {
+            position: relative;
+            width: min(420px, 90vw);
+            height: 180px;
+            margin: 50px auto 0;
+        }
+
         .rose {
             font-size: 100px;
             animation: pulse 2s ease-in-out infinite;
@@ -134,24 +141,53 @@
             color: white;
             border-radius: 50px;
             cursor: pointer;
-            margin-top: 50px;
             transition: all 0.3s ease;
             box-shadow: 0 10px 30px rgba(255, 107, 157, 0.4);
             animation: btnFloat 3s ease-in-out infinite, fadeInUp 1.5s ease-out 0.6s both;
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            white-space: nowrap;
         }
 
         @keyframes btnFloat {
             0%, 100% {
-                transform: translateY(0);
+                transform: translateX(-50%) translateY(0);
             }
             50% {
-                transform: translateY(-10px);
+                transform: translateX(-50%) translateY(-10px);
             }
         }
 
         .forgive-btn:hover {
-            transform: scale(1.1);
+            transform: translateX(-50%) scale(1.1);
             box-shadow: 0 15px 50px rgba(255, 107, 157, 0.6);
+        }
+
+        .no-btn {
+            position: fixed;
+            left: 50%;
+            top: calc(50% + 90px);
+            transform: translateX(-50%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            padding: 16px 34px;
+            border-radius: 50px;
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: left 0.25s ease, top 0.25s ease, transform 0.25s ease, background 0.25s ease;
+            backdrop-filter: blur(6px);
+            animation: fadeInUp 1.5s ease-out 0.9s both;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .no-btn:hover {
+            background: rgba(255, 255, 255, 0.16);
         }
 
         /* Response Overlay */
@@ -201,12 +237,23 @@
 
         /* Responsive */
         @media (max-width: 600px) {
+            .button-area {
+                height: 170px;
+            }
+
             .rose {
                 font-size: 70px;
             }
+
             .forgive-btn {
                 padding: 18px 50px;
                 font-size: 20px;
+            }
+
+            .no-btn {
+                padding: 14px 28px;
+                font-size: 18px;
+                top: 88px;
             }
         }
     </style>
@@ -220,13 +267,15 @@
         <h1 class="sorry-text">I'm Sorry</h1>
         <p class="subtitle">Sorrryyyyyy nishuuuuuuuuuuuuuuuuuuuuuuuuuuuu</p>
 
-        <button class="forgive-btn" onclick="showResponse()">
-            💗 Forgive Me? 💗
-        </button>
+        <div class="button-area" id="buttonArea">
+            <button class="forgive-btn" onclick="showResponse()">
+                💗 Forgive Me? 💗
+            </button>
 
-        <button class="no-btn" id="noBtn" onmouseover="moveButton()" onclick="tryMoveButton()">
-            ❌ Don't Forgive
-        </button>
+            <button class="no-btn" id="noBtn" type="button" onmouseenter="moveButton(event)" onpointerdown="blockNope(event)" onmousedown="blockNope(event)" ontouchstart="blockNope(event)" onclick="blockNope(event)" onfocus="handleNoButtonFocus()">
+                ❌ Don't Forgive
+            </button>
+        </div>
     </div>
 
     <!-- Response Overlay -->
@@ -272,6 +321,104 @@
         for (let i = 0; i < 20; i++) {
             setTimeout(createHeart, i * 200);
         }
+
+        function getPointerPosition(event) {
+            if (!event) {
+                return null;
+            }
+
+            if ('touches' in event && event.touches.length > 0) {
+                return {
+                    x: event.touches[0].clientX,
+                    y: event.touches[0].clientY
+                };
+            }
+
+            if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+                return {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            return null;
+        }
+
+        function positionNoButton(left, top) {
+            const noBtn = document.getElementById('noBtn');
+            noBtn.style.left = `${left}px`;
+            noBtn.style.top = `${top}px`;
+            noBtn.style.transform = 'none';
+        }
+
+        function setInitialNoButtonPosition() {
+            const noBtn = document.getElementById('noBtn');
+            const forgiveBtn = document.querySelector('.forgive-btn');
+            const forgiveRect = forgiveBtn.getBoundingClientRect();
+            const left = Math.max(16, (window.innerWidth - noBtn.offsetWidth) / 2);
+            const top = Math.min(window.innerHeight - noBtn.offsetHeight - 16, forgiveRect.bottom + 24);
+
+            positionNoButton(left, top);
+        }
+
+        function moveButton(event) {
+            const noBtn = document.getElementById('noBtn');
+            const maxLeft = Math.max(16, window.innerWidth - noBtn.offsetWidth - 16);
+            const maxTop = Math.max(16, window.innerHeight - noBtn.offsetHeight - 16);
+            const pointer = getPointerPosition(event);
+            let left = 16 + (Math.random() * (maxLeft - 16));
+            let top = 16 + (Math.random() * (maxTop - 16));
+
+            if (pointer) {
+                const minDistance = Math.min(220, Math.max(140, noBtn.offsetWidth));
+
+                for (let attempt = 0; attempt < 18; attempt++) {
+                    const candidateLeft = 16 + (Math.random() * (maxLeft - 16));
+                    const candidateTop = 16 + (Math.random() * (maxTop - 16));
+                    const centerX = candidateLeft + (noBtn.offsetWidth / 2);
+                    const centerY = candidateTop + (noBtn.offsetHeight / 2);
+
+                    if (Math.hypot(centerX - pointer.x, centerY - pointer.y) >= minDistance) {
+                        left = candidateLeft;
+                        top = candidateTop;
+                        break;
+                    }
+
+                    left = candidateLeft;
+                    top = candidateTop;
+                }
+            }
+
+            positionNoButton(left, top);
+        }
+
+        function blockNope(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            moveButton(event);
+            return false;
+        }
+
+        function handleNoButtonFocus() {
+            document.getElementById('noBtn').blur();
+            moveButton();
+        }
+
+        function dodgePointer(event) {
+            const noBtn = document.getElementById('noBtn');
+            const rect = noBtn.getBoundingClientRect();
+            const centerX = rect.left + (rect.width / 2);
+            const centerY = rect.top + (rect.height / 2);
+            const distance = Math.hypot(centerX - event.clientX, centerY - event.clientY);
+
+            if (distance < 110) {
+                moveButton(event);
+            }
+        }
+
+        window.addEventListener('load', setInitialNoButtonPosition);
+        window.addEventListener('resize', setInitialNoButtonPosition);
+        document.addEventListener('mousemove', dodgePointer);
     </script>
 </body>
 </html>
